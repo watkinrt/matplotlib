@@ -15,9 +15,9 @@ font = {'family': 'serif',
 x = np.linspace(0.0, 5.0, 100)
 y = np.cos(2*np.pi*x) * np.exp(-x)
 
-tex = r'${\displaystyle \frac{1}{2}} {\frac{3}{2}} ' + \
-         r'{\scriptscriptstyle \frac{4}{5}} \cos(2 \pi t)' + \
-         r'{\scriptstyle e^{{\textstyle x}x}}$'
+tex = r'$\scriptstyle {\displaystyle \frac{1}{2}} {\frac{3}{2}} ' + \
+         r'{\scriptscriptstyle \frac{4}{5}} \sum_{n}^{N} \cos(2 n \pi t)' + \
+         r'{\scriptstyle e^{{\textstyle x}x}} $'
 
 plt.close('all')
 plt.plot(x, y, 'k')
