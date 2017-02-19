@@ -2316,6 +2316,7 @@ class Parser(object):
         p.float_literal    = Forward()
         p.font             = Forward()
         p.frac             = Forward()
+        p.dfrac            = Forward()
         p.function         = Forward()
         p.genfrac          = Forward()
         p.group            = Forward()
@@ -2406,6 +2407,11 @@ class Parser(object):
                              Suppress(Literal(r"\frac"))
                            - ((p.required_group + p.required_group) | Error(r"Expected \frac{num}{den}"))
                          )
+        
+        p.dfrac         <<= Group(
+                             Suppress(Literal(r"\dfrac"))
+                           - ((p.required_group + p.required_group) | Error(r"Expected \dfrac{num}{den}"))
+                         )
 
         p.stackrel      <<= Group(
                              Suppress(Literal(r"\stackrel"))
@@ -2459,6 +2465,7 @@ class Parser(object):
                          | p.function
                          | p.group
                          | p.frac
+                         | p.dfrac
                          | p.stackrel
                          | p.binom
                          | p.genfrac
@@ -2596,7 +2603,7 @@ class Parser(object):
 
     def math_string(self, s, loc, toks):
         # print "math_string", toks[0][1:-1]
-        if s.startswith('$$'):
+        if toks[0].startswith('$$'):
             # Set the math style to displaystyle
             self.get_state().math_style = self._math_styles_dict['displaystyle']
             return self._math_expression.parseString(toks[0][2:-2])
@@ -2840,11 +2847,19 @@ class Parser(object):
         return [grp]
     required_group = simple_group = group
     
-    def math_style(self, s, loc, toks):        
+    def math_style(self, s, loc, toks):
+        
+        # Set the size of the text according to the math style (noting that
+        # displaystyle and textstyle both have the same size)
+        
         # Set the math_style for the current state
         assert(len(toks)==1)
-        style = toks[0]
-        self.get_state().math_style = self._math_styles_dict[style]
+        state = self.get_state()
+        #current_math_style = state.math_style
+        #SHRINK_FACTOR
+        #GROW_FACTOR
+        new_math_style = toks[0]
+        state.math_style = self._math_styles_dict[new_math_style]
         return []     
 
     def end_group(self, s, loc, toks):
@@ -3123,6 +3138,17 @@ class Parser(object):
         num, den = toks[0]
 
         return self._genfrac('', '', thickness, self.get_state().math_style, num, den)
+
+    def dfrac(self, s, loc, toks):
+        assert(len(toks)==1)
+        assert(len(toks[0])==2)
+        state = self.get_state()
+
+        thickness = state.font_output.get_underline_thickness(
+            state.font, state.fontsize, state.dpi)
+        num, den = toks[0]
+
+        return self._genfrac('', '', thickness, 0, num, den)
 
     def stackrel(self, s, loc, toks):
         assert(len(toks)==1)
