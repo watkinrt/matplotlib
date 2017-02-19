@@ -2496,7 +2496,8 @@ class Parser(object):
 
         p.math          <<= OneOrMore(p.token)
 
-        p.math_string   <<= QuotedString('$', '\\', unquoteResults=False)
+        p.math_string   <<= QuotedString('$$', unquoteResults=False) | \
+                                QuotedString('$', '\\', unquoteResults=False)
 
         p.non_math      <<= Regex(r"(?:(?:\\[$])|[^$])*").leaveWhitespace()
 
@@ -2559,7 +2560,8 @@ class Parser(object):
                 self.font,
                 self.font_class,
                 self.fontsize,
-                self.dpi)
+                self.dpi,
+                self.math_style)
 
         def _get_font(self):
             return self._font
@@ -2594,7 +2596,13 @@ class Parser(object):
 
     def math_string(self, s, loc, toks):
         # print "math_string", toks[0][1:-1]
-        return self._math_expression.parseString(toks[0][1:-1])
+        if s.startswith('$$'):
+            # Set the math style to displaystyle
+            self.get_state().math_style = self._math_styles_dict['displaystyle']
+            return self._math_expression.parseString(toks[0][2:-2])
+        else:
+            # Inline math mode
+            return self._math_expression.parseString(toks[0][1:-1])
 
     def math(self, s, loc, toks):
         #~ print "math", toks

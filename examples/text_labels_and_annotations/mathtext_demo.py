@@ -2,8 +2,9 @@
 Demo using fontdict to control style of text and labels.
 """
 import numpy as np
+import matplotlib as mpl
+import matplotlib.mathtext as mathtext
 import matplotlib.pyplot as plt
-
 
 font = {'family': 'serif',
         'color':  'darkred',
@@ -16,7 +17,7 @@ y = np.cos(2*np.pi*x) * np.exp(-x)
 
 plt.plot(x, y, 'k')
 plt.title('Damped exponential decay', fontdict=font)
-plt.text(2, 0.65, r'$\scriptstyle {\displaystyle \frac{1}{2}} \frac{3}{2} {\textstyle \frac{4}{5}} \cos(2 \pi t) \exp(-t)$', fontdict=font)
+plt.text(2, 0.65, r'$$\textstyle {\displaystyle \frac{1}{2}} {\frac{3}{2}} {\scriptscriptstyle \frac{4}{5}} \cos(2 \pi t) \exp(-t)$$', fontdict=font)
 plt.xlabel('time (s)', fontdict=font)
 plt.ylabel('voltage (mV)', fontdict=font)
 
