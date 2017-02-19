@@ -2268,6 +2268,13 @@ class Parser(object):
     _spaced_symbols = _binary_operators | _relation_symbols | _arrow_symbols
 
     _punctuation_symbols = set(r', ; . ! \ldotp \cdotp'.split())
+    
+    _math_styles_dict = {'displaystyle': 0, 'textstyle': 1, 'scriptstyle': 2,
+                         'scriptscriptstyle': 3}
+    
+    _math_styles = set('''
+        displaystyle textstyle scriptstyle scriptscriptstyle
+        '''.split())
 
     _overunder_symbols = set(r'''
        \sum \prod \coprod \bigcap \bigcup \bigsqcup \bigvee
@@ -2312,6 +2319,7 @@ class Parser(object):
         p.function         = Forward()
         p.genfrac          = Forward()
         p.group            = Forward()
+        p.math_style       = Forward()
         p.int_literal      = Forward()
         p.latexfont        = Forward()
         p.lbracket         = Forward()
@@ -2388,8 +2396,10 @@ class Parser(object):
         p.simple_group  <<= Group(p.lbrace + ZeroOrMore(p.token) + p.rbrace)
         p.required_group<<= Group(p.lbrace + OneOrMore(p.token) + p.rbrace)
         p.group         <<= Group(p.start_group + ZeroOrMore(p.token) + p.end_group)
+        
+        p.math_style    <<= Suppress(p.bslash) + oneOf(list(self._math_styles))
 
-        p.font          <<= Suppress(p.bslash) + oneOf(list(self._fontnames))
+        p.font          <<= (Suppress(p.bslash) + oneOf(list(self._fontnames)))
         p.latexfont     <<= Suppress(p.bslash) + oneOf(['math' + x for x in self._fontnames])
 
         p.frac          <<= Group(
@@ -2459,6 +2469,7 @@ class Parser(object):
 
         p.simple        <<= ( p.space
                          | p.customspace
+                         | p.math_style # Needs to go before p.font so \scriptstyle and \scriptscriptstyle are matched before the \scr font
                          | p.font
                          | p.subsuper
                          )
@@ -2533,12 +2544,14 @@ class Parser(object):
         States are pushed and popped from a stack as necessary, and
         the "current" state is always at the top of the stack.
         """
-        def __init__(self, font_output, font, font_class, fontsize, dpi):
+        def __init__(self, font_output, font, font_class, fontsize, dpi, 
+                     math_style=1):
             self.font_output = font_output
             self._font = font
             self.font_class = font_class
             self.fontsize = fontsize
             self.dpi = dpi
+            self.math_style = math_style
 
         def copy(self):
             return Parser.State(
@@ -2818,6 +2831,13 @@ class Parser(object):
         grp = Hlist(toks[0])
         return [grp]
     required_group = simple_group = group
+    
+    def math_style(self, s, loc, toks):        
+        # Set the math_style for the current state
+        assert(len(toks)==1)
+        style = toks[0]
+        self.get_state().math_style = self._math_styles_dict[style]
+        return []     
 
     def end_group(self, s, loc, toks):
         self.pop_state()
@@ -3043,8 +3063,11 @@ class Parser(object):
             state.font, state.fontsize, state.dpi)
 
         rule = float(rule)
-        num.shrink()
-        den.shrink()
+        
+        # Loop through and shrink the num and den according to the math style
+        for _ in range(style):
+            num.shrink()
+            den.shrink()
         cnum = HCentered([num])
         cden = HCentered([den])
         width = max(num.width, den.width)
@@ -3091,21 +3114,21 @@ class Parser(object):
             state.font, state.fontsize, state.dpi)
         num, den = toks[0]
 
-        return self._genfrac('', '', thickness, '', num, den)
+        return self._genfrac('', '', thickness, self.get_state().math_style, num, den)
 
     def stackrel(self, s, loc, toks):
         assert(len(toks)==1)
         assert(len(toks[0])==2)
         num, den = toks[0]
 
-        return self._genfrac('', '', 0.0, '', num, den)
+        return self._genfrac('', '', 0.0, self.get_state().math_style, num, den)
 
     def binom(self, s, loc, toks):
         assert(len(toks)==1)
         assert(len(toks[0])==2)
         num, den = toks[0]
 
-        return self._genfrac('(', ')', 0.0, '', num, den)
+        return self._genfrac('(', ')', 0.0, self.get_state().math_style, num, den)
 
     def sqrt(self, s, loc, toks):
         #~ print "sqrt", toks
